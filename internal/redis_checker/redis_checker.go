@@ -31,12 +31,16 @@ func (rc *RedisChecker) Check(ctx context.Context, userID int64) (bool, error) {
 	}
 	if flag {
 		rc.eg.Go(func() error {
-			<-time.After(time.Second * time.Duration(rc.cfg.N))
-			err = rc.repo.Decrement(ctx, userID)
-			if err != nil {
-				return err
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-time.After(time.Second * time.Duration(rc.cfg.N)):
+				err = rc.repo.Decrement(ctx, userID)
+				if err != nil {
+					return err
+				}
+				return nil
 			}
-			return nil
 		})
 	}
 	return flag, nil
