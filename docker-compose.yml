@@ -1,0 +1,43 @@
+version: '3.7'
+services:
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=1234
+      - REDIS_PORT=6379
+      - REDIS_DATABASES=1
+    networks:
+      - checker_net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+  backend:
+    container_name: checker_backend
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./.env
+    networks:
+      - checker_net
+    volumes:
+      - "redis_volume:/data"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+networks:
+  checker_net:
+    driver: bridge
+
+volumes:
+  redis_volume:
+    name: redis_volume
